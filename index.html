@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador Público de Certificados - Innova Labs & Ecos Foundation</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconos de Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Librería html5-qrcode para escaneo de cámara real -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Librería QRious para generación local y offline de códigos QR en un canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            50: '#f4f6fa',
+                            100: '#eaedf4',
+                            200: '#d5dae9',
+                            800: '#15223c',
+                            900: '#091442', // Azul marino profundo de Innova Labs
+                        },
+                        tealEcos: {
+                            DEFAULT: '#00A499', // Turquesa de Ecos Foundation
+                            dark: '#00857c',
+                            light: '#e6f6f5',
+                        },
+                        greenLeaf: {
+                            DEFAULT: '#00D182', // Verde vibrante de la hoja de Innova Labs
+                            dark: '#00b06d',
+                            light: '#e6faf2',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+        .bg-pattern {
+            background-color: #091442;
+            background-image: radial-gradient(circle at 10% 20%, rgba(0, 209, 130, 0.12) 0%, transparent 40%), 
+                              radial-gradient(circle at 90% 80%, rgba(0, 164, 153, 0.12) 0%, transparent 40%);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- CABECERA INSTITUCIONAL CON LOGOS VECTORIALES -->
+    <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-40 print:hidden">
+        <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Logotipos Reconstruidos (Ecos Foundation | Innova Labs) -->
+            <div class="flex items-center gap-3 sm:gap-4">
+                <!-- Ecos Foundation SVG -->
+                <div class="flex items-center">
+                    <svg class="h-10 sm:h-12 w-auto" viewBox="0 0 240 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(5, 5)">
+                            <circle cx="25" cy="25" r="23" stroke="#00A499" stroke-width="4" fill="none"/>
+                            <path d="M25 10 C21 17 21 32 25 35 C29 32 29 17 25 10 Z" fill="#00A499"/>
+                            <path d="M25 25 C15 25 11 31 15 36 C21 34 23 30 25 25 Z" fill="#00A499" opacity="0.85"/>
+                            <path d="M25 25 C35 25 39 31 35 36 C29 34 27 30 25 25 Z" fill="#00A499" opacity="0.85"/>
+                        </g>
+                        <text x="65" y="32" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="28" fill="#00A499" letter-spacing="-0.5">ecos</text>
+                        <text x="65" y="50" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="11" fill="#4B5563" letter-spacing="3.5">FOUNDATION</text>
+                    </svg>
+                </div>
+
+                <!-- Línea Divisoria -->
+                <div class="h-8 w-[1px] bg-slate-300"></div>
+
+                <!-- Innova Labs SVG -->
+                <div class="flex items-center">
+                    <svg class="h-10 sm:h-12 w-auto" viewBox="0 0 240 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(5, 5)">
+                            <circle cx="25" cy="25" r="23" stroke="#091442" stroke-width="3" fill="none"/>
+                            <path d="M3 25 H47" stroke="#091442" stroke-width="1.5"/>
+                            <path d="M7 13 Q25 17 43 13" stroke="#091442" stroke-width="1" fill="none"/>
+                            <path d="M7 37 Q25 33 43 37" stroke="#091442" stroke-width="1" fill="none"/>
+                            <path d="M25 3 V47" stroke="#091442" stroke-width="1.5"/>
+                            <path d="M15 5 Q23 25 15 45" stroke="#091442" stroke-width="1" fill="none"/>
+                            <path d="M35 5 Q27 25 35 45" stroke="#091442" stroke-width="1" fill="none"/>
+                            <path d="M8 42 C16 40 40 34 43 12 C30 26 21 30 8 42 Z" fill="#00D182" stroke="#091442" stroke-width="1.2"/>
+                        </g>
+                        <text x="65" y="27" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="24" fill="#091442">Innova</text>
+                        <text x="65" y="49" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="24" fill="#091442">Labs</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Navegación de Roles -->
+            <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                <button onclick="switchView('verify')" id="nav-verify" class="px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 flex items-center gap-2 bg-white text-navy-900 shadow-sm">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-greenLeaf"></i>
+                    Verificar Público
+                </button>
+                <button onclick="switchView('admin-login')" id="nav-admin" class="px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 flex items-center gap-2 text-slate-600 hover:text-navy-900">
+                    <i data-lucide="lock" class="w-4 h-4"></i>
+                    Admin Privado
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- NOTIFICACIONES TOAST -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 max-w-sm w-full bg-white border-l-4 border-tealEcos p-4 rounded-r-xl shadow-xl flex items-start gap-3 pointer-events-none print:hidden">
+        <div id="toast-icon-box" class="p-1 rounded-lg bg-tealEcos-light text-tealEcos">
+            <i data-lucide="info" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-grow">
+            <h4 class="font-bold text-slate-950 text-xs sm:text-sm" id="toast-title">Aviso de Seguridad</h4>
+            <p class="text-[11px] sm:text-xs text-slate-600 mt-0.5" id="toast-message">Mensaje informativo.</p>
+        </div>
+    </div>
+
+    <!-- MODAL DE VISUALIZACIÓN / DESCARGA DE QR INDIVIDUAL -->
+    <div id="qr-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 print:hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-5 transform scale-95 transition-transform duration-300 text-center">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-base text-slate-950 text-left">Código QR de Autovalidación</h3>
+                <button onclick="closeQrModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="bg-white p-3 border border-slate-200 rounded-xl flex items-center justify-center w-48 h-48 mx-auto shadow-inner">
+                    <canvas id="modal-qr-canvas" class="w-full h-full object-contain"></canvas>
+                </div>
+                <div class="space-y-1">
+                    <p id="modal-qr-student" class="font-bold text-slate-900 text-sm">Estudiante</p>
+                    <p id="modal-qr-code" class="text-xs font-mono font-bold text-tealEcos bg-tealEcos-light px-2.5 py-1 rounded-full inline-block">CÓDIGO</p>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-normal px-2">
+                    Este código QR redirige directamente a la consulta de verificación de este diploma, cargando los datos de forma inmediata y automatizada.
+                </p>
+            </div>
+
+            <div class="pt-2 flex gap-2">
+                <button onclick="copyValidationLink()" class="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar Enlace
+                </button>
+                <button onclick="printQrDirectly()" class="flex-1 px-3 py-2 bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i> Imprimir QR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 print:hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 transform scale-95 transition-transform duration-300">
+            <div class="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-lg text-slate-950">¿Eliminar este Certificado?</h3>
+                <p class="text-xs text-slate-600 mt-1">
+                    Esta acción es irreversible. El código asociado quedará completamente invalidado y nadie podrá consultarlo mediante el buscador o el código QR.
+                </p>
+            </div>
+            <div class="flex gap-3 justify-end pt-2">
+                <button id="btn-cancel-confirm" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all">
+                    Cancelar
+                </button>
+                <button id="btn-action-confirm" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all">
+                    Sí, Eliminar de inmediato
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUERPO CONTENEDOR PRINCIPAL -->
+    <main class="flex-grow flex flex-col items-center justify-start w-full px-4 py-8">
+
+        <!-- ================= VISTA PÚBLICA DE VALIDACIÓN ================= -->
+        <section id="view-verify" class="w-full max-w-2xl space-y-6 print:hidden">
+            
+            <!-- Banner de Introducción -->
+            <div class="text-center space-y-2">
+                <span class="inline-flex bg-greenLeaf-light text-greenLeaf-dark text-[10px] font-extrabold uppercase tracking-widest px-3.5 py-1.5 rounded-full border border-greenLeaf/10">
+                    SISTEMA DE VERIFICACIÓN AUTORIZADO
+                </span>
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-navy-900 tracking-tight">
+                    Validador Público de Logros Académicos
+                </h1>
+                <p class="text-slate-600 text-xs sm:text-sm max-w-md mx-auto">
+                    Introduce el código impreso o escanea el QR de tu diploma emitido por <strong>Innova Labs</strong> bajo el aval de <strong>Ecos Foundation</strong>.
+                </p>
+            </div>
+
+            <!-- Panel de Búsqueda -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
+                <!-- Pestañas de entrada -->
+                <div class="flex border-b border-slate-100 bg-slate-50">
+                    <button onclick="toggleVerifyTab('code')" id="tab-code" class="flex-1 py-4 text-center font-bold text-xs sm:text-sm border-b-2 border-tealEcos text-tealEcos flex items-center justify-center gap-2">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                        Código del Certificado
+                    </button>
+                    <button onclick="toggleVerifyTab('qr')" id="tab-qr" class="flex-1 py-4 text-center font-bold text-xs sm:text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2">
+                        <i data-lucide="qr-code" class="w-4 h-4"></i>
+                        Escanear Cámara / QR
+                    </button>
+                </div>
+
+                <!-- Entrada por código de texto -->
+                <div id="panel-code" class="p-6 sm:p-8 space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Código Único del Certificado</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                                <i data-lucide="binary" class="w-5 h-5"></i>
+                            </span>
+                            <input type="text" id="search-code-input" placeholder="Ej: IL-10293" 
+                                class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-tealEcos focus:ring-0 outline-none text-base font-mono font-bold tracking-wider transition-all uppercase placeholder-slate-400">
+                        </div>
+                    </div>
+                    <!-- Botón de verificación con animación de atención -->
+                    <button onclick="handleCodeVerification()" id="btn-submit-verification" class="w-full bg-navy-900 hover:bg-navy-800 text-white font-bold py-4 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2">
+                        <i data-lucide="search" class="w-4 h-4 text-greenLeaf"></i>
+                        Verificar Autenticidad
+                    </button>
+                </div>
+
+                <!-- Entrada por escaneo de QR (Cámara Real) -->
+                <div id="panel-qr" class="p-6 sm:p-8 space-y-4 hidden">
+                    <div class="relative bg-slate-900 rounded-xl overflow-hidden border border-slate-800 min-h-[280px] flex flex-col items-center justify-center p-6 text-center">
+                        <div id="reader-camera" class="w-full max-w-xs overflow-hidden rounded-lg mx-auto"></div>
+
+                        <!-- Panel de control de simulación e inicio -->
+                        <div id="camera-idle-view" class="space-y-4">
+                            <div class="w-14 h-14 bg-white/10 text-white rounded-full flex items-center justify-center mx-auto animate-pulse">
+                                <i data-lucide="aperture" class="w-7 h-7"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">Dispositivo de Escaneo Apagado</h4>
+                                <p class="text-[11px] text-slate-400 max-w-xs mx-auto mt-1">
+                                    Enciende la cámara para realizar la lectura interactiva del QR impreso en tu diploma.
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <button onclick="startCameraScanner()" class="bg-tealEcos hover:bg-tealEcos-dark text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow transition-all">
+                                    <i data-lucide="camera" class="w-4 h-4"></i> Iniciar Escáner Real
+                                </button>
+                                <button onclick="triggerDemoScannerSim()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow transition-all border border-slate-700">
+                                    <i data-lucide="sparkles" class="w-4 h-4 text-greenLeaf"></i> Simular Lectura QR
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="camera-scanning-view" class="hidden absolute top-3 right-3 flex items-center gap-1.5 bg-red-100 text-red-700 text-xs px-2.5 py-1.5 rounded-full font-bold animate-pulse">
+                            <span class="w-2.5 h-2.5 bg-red-600 rounded-full"></span> ESCANEANDO...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULTADOS DINÁMICOS DE BÚSQUEDA PÚBLICA -->
+            <div id="search-result-area" class="hidden">
+
+                <!-- RESPUESTA POSITIVA: CERTIFICADO AUTÉNTICO -->
+                <div id="certificate-details-box" class="hidden bg-white rounded-2xl border-2 border-greenLeaf shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-greenLeaf to-tealEcos p-6 text-white text-center space-y-2 relative">
+                        <div class="absolute right-4 top-4 opacity-10">
+                            <i data-lucide="award" class="w-20 h-20"></i>
+                        </div>
+                        <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center mx-auto text-greenLeaf-dark shadow-md">
+                            <i data-lucide="badge-check" class="w-9 h-9"></i>
+                        </div>
+                        <h2 class="text-lg font-extrabold tracking-wide uppercase">DIPLOMA OFICIAL AUTENTICADO</h2>
+                        <p class="text-[11px] text-white/90 max-w-md mx-auto">
+                            Este certificado ha sido verificado públicamente y corresponde a un registro auténtico y vigente en nuestros servidores académicos.
+                        </p>
+                    </div>
+
+                    <!-- Datos Certificado -->
+                    <div class="p-6 sm:p-8 space-y-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-slate-100 pb-5">
+                            <div class="space-y-0.5">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Estudiante Certificado</span>
+                                <h3 id="detail-student-name" class="text-lg font-bold text-slate-900">Estudiante</h3>
+                                <p id="detail-student-id" class="text-xs font-semibold text-slate-500 font-mono">DNI / RUT: 10.456.789</p>
+                            </div>
+                            <div class="space-y-0.5 sm:text-right">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Código de Validación</span>
+                                <span id="detail-certificate-code" class="inline-block px-3 py-1 bg-navy-50 border border-navy-100 text-navy-900 text-xs font-mono font-bold rounded-lg tracking-wider uppercase">
+                                    CÓDIGO
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Detalles de Curso -->
+                        <div class="bg-navy-50/50 rounded-xl p-4 border border-navy-100/50 space-y-3">
+                            <div class="space-y-0.5">
+                                <span class="text-[9px] font-bold text-tealEcos uppercase tracking-widest block" id="detail-cert-type-label">Programa Académico</span>
+                                <h4 id="detail-course-name" class="text-sm sm:text-base font-bold text-navy-900">Nombre del Programa</h4>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 pt-3 border-t border-navy-100">
+                                <div class="space-y-0.5">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Período de Realización</span>
+                                    <p id="detail-issue-period" class="text-xs font-bold text-slate-700">De fecha a fecha</p>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Horas Lectivas</span>
+                                    <p id="detail-course-hours" class="text-xs font-bold text-slate-700">Horas</p>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-dashed border-navy-100">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Fecha Oficial de Emisión</span>
+                                <p id="detail-issue-date" class="text-xs font-bold text-slate-700">Emisión</p>
+                            </div>
+                        </div>
+
+                        <!-- Firmas e Instituciones -->
+                        <div class="flex items-start gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <div class="w-8 h-8 flex-shrink-0 bg-white rounded-full border border-slate-100 flex items-center justify-center text-tealEcos">
+                                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-[11px] text-slate-500 leading-relaxed">
+                                Este registro ha sido consultado públicamente bajo el protocolo de transparencia académica de <strong>Innova Labs</strong> y la auditoría directiva de <strong>Ecos Foundation</strong>. No presenta alteraciones y es plenamente válido.
+                            </div>
+                        </div>
+
+                        <!-- Ver Diploma Completo -->
+                        <button onclick="renderFullDiplomaView()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-2">
+                            <i data-lucide="award" class="w-4 h-4 text-tealEcos"></i>
+                            Visualizar Diploma Académico Completo / Imprimir
+                        </button>
+                    </div>
+                </div>
+
+                <!-- RESPUESTA NEGATIVA: CERTIFICADO NO ENCONTRADO -->
+                <div id="certificate-not-found-box" class="hidden bg-white rounded-2xl border-2 border-red-200 shadow-xl p-6 sm:p-8 text-center space-y-4">
+                    <div class="w-14 h-14 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border border-red-100">
+                        <i data-lucide="alert-octagon" class="w-7 h-7"></i>
+                    </div>
+                    <div class="space-y-1.5">
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900">Registro No Encontrado</h3>
+                        <p class="text-xs text-slate-600 max-w-sm mx-auto leading-normal">
+                            El código que has ingresado no corresponde a ningún certificado activo en nuestra base de datos pública. Por favor, comprueba errores de escritura.
+                        </p>
+                    </div>
+                    <button onclick="clearSearchState()" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all inline-flex items-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Reintentar Búsqueda
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= VISTA DE ACCESO PRIVADO (LOGIN) ================= -->
+        <section id="view-admin-login" class="w-full max-w-md space-y-6 hidden my-auto print:hidden">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-xl p-6 sm:p-8 space-y-5">
+                <div class="text-center space-y-1">
+                    <div class="w-12 h-12 bg-navy-50 text-navy-900 rounded-full flex items-center justify-center mx-auto border border-navy-100">
+                        <i data-lucide="lock" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="text-xl font-extrabold text-navy-900">Acceso Administrativo</h2>
+                    <p class="text-xs text-slate-500 font-medium">Introduce tus credenciales de seguridad corporativa.</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label for="pwd-input" class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contraseña de Administrador</label>
+                        <input type="password" id="pwd-input" placeholder="••••••••" 
+                            class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-navy-900 transition-all font-mono text-sm">
+                    </div>
+                    <button onclick="processLogin()" class="w-full bg-navy-900 hover:bg-navy-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                        Ingresar al Panel <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= VISTA DE ADMINISTRACIÓN Y EMISIÓN ================= -->
+        <section id="view-admin-dashboard" class="w-full space-y-6 hidden print:hidden">
+            
+            <div class="bg-navy-900 text-white p-6 rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-pattern">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 bg-greenLeaf rounded-full animate-ping"></span>
+                        <span class="text-[9px] text-greenLeaf uppercase font-extrabold tracking-widest">Consola Activa</span>
+                    </div>
+                    <h2 class="text-2xl font-black">Emisión de Acreditaciones - Innova Labs</h2>
+                    <p class="text-xs text-white/75">Crea registros, escribe temas libres, define el firmante, su cargo y sube su firma digital corporativa.</p>
+                </div>
+                <button onclick="processLogout()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5 text-red-400"></i> Cerrar Sesión
+                </button>
+            </div>
+
+            <!-- Panel de Doble Columna -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Columna 1: Configuración y Alta -->
+                <div class="lg:col-span-1 space-y-6">
+                    
+                    <!-- Configuración rápida de políticas -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+                        <h3 class="font-bold text-navy-900 text-sm flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-4.5 h-4.5 text-tealEcos"></i> Prefijo de Códigos
+                        </h3>
+                        <div class="space-y-1">
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Prefijo de Código Único</label>
+                            <input type="text" id="cfg-prefix-input" oninput="saveConfigSettings()" class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs font-mono font-bold uppercase" placeholder="Ej: IL-2026-">
+                            <p class="text-[9px] text-slate-400">Todos los certificados generados comenzarán con esta clave.</p>
+                        </div>
+                    </div>
+
+                    <!-- Registrar Nuevo Diploma -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                        <h3 class="font-bold text-navy-900 text-sm flex items-center gap-2">
+                            <i data-lucide="plus-circle" class="w-4.5 h-4.5 text-greenLeaf"></i> Registrar Estudiante
+                        </h3>
+                        
+                        <form id="form-registration" onsubmit="event.preventDefault(); emitNewCertificate();" class="space-y-3.5">
+                            <div class="space-y-1">
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Nombre Completo del Alumno</label>
+                                <input type="text" id="student-name-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs" placeholder="Nombre completo">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Nº Identificación (DNI / RUT / Pasaporte)</label>
+                                <input type="text" id="student-id-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs font-mono" placeholder="Ej: 11.222.333">
+                            </div>
+
+                            <!-- TIPO DE CERTIFICADO -->
+                            <div class="space-y-1">
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Tipo de Certificación</label>
+                                <select id="cert-type-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs bg-white">
+                                    <option value="Taller">Taller</option>
+                                    <option value="Curso">Curso</option>
+                                    <option value="Diplomado">Diplomado</option>
+                                    <option value="Especialización">Especialización</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            
+                            <!-- TEMA / CURSO CON ENTRADA DE TEXTO LIBRE -->
+                            <div class="space-y-1">
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Tema del Certificado</label>
+                                <input type="text" id="course-name-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs" placeholder="Ej: Aplicaciones Prácticas de Hidrógeno Verde">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Horas Lectivas</label>
+                                    <input type="number" id="course-hours-field" required min="1" max="600" class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs" placeholder="Ej: 80">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Fecha de Emisión</label>
+                                    <input type="date" id="issue-date-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs">
+                                </div>
+                            </div>
+
+                            <!-- PERÍODO: DESDE Y HASTA -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Fecha Inicio (Desde)</label>
+                                    <input type="date" id="start-date-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Fecha Fin (Hasta)</label>
+                                    <input type="date" id="end-date-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs">
+                                </div>
+                            </div>
+
+                            <!-- DATOS REQUERIDOS DEL FIRMANTE -->
+                            <div class="border-t border-slate-100 pt-3 space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="block text-[10px] font-extrabold text-navy-900 uppercase tracking-wider">Autoridad Firmante</span>
+                                    <label class="flex items-center gap-1 text-[9px] text-slate-500 cursor-pointer select-none">
+                                        <input type="checkbox" id="save-signatory-pref" class="rounded text-tealEcos focus:ring-0"> Guardar datos
+                                    </label>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div class="space-y-1">
+                                        <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Nombre Completo</label>
+                                        <input type="text" id="signatory-name-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs" placeholder="Ej: Dr. Alejandro Montenegro">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Cargo Institucional</label>
+                                        <input type="text" id="signatory-role-field" required class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none focus:border-tealEcos text-xs" placeholder="Ej: Presidencia General">
+                                    </div>
+                                </div>
+
+                                <!-- FORMULARIO DE CARGA DE ARCHIVO DE FIRMA (NUEVO) -->
+                                <div class="space-y-1.5">
+                                    <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Imagen de la Firma (PNG / JPG)</label>
+                                    <div class="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer relative" onclick="document.getElementById('signature-file-input').click()">
+                                        <i data-lucide="upload" class="w-7 h-7 text-slate-400 mb-1"></i>
+                                        <span class="text-xs font-semibold text-tealEcos">Cargar firma digital</span>
+                                        <span class="text-[8.5px] text-slate-400 mt-0.5">Sugerido: Fondo transparente (PNG)</span>
+                                        <input type="file" id="signature-file-input" accept="image/*" class="hidden" onchange="handleSignatureFileUpload(this)">
+                                    </div>
+                                    
+                                    <!-- Previsualización de Firma Cargada -->
+                                    <div id="signature-preview-box" class="hidden flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-150 text-xs">
+                                        <div class="flex items-center gap-2 truncate">
+                                            <i data-lucide="check-circle" class="w-4 h-4 text-greenLeaf-dark"></i>
+                                            <span class="font-bold text-slate-700 truncate text-[10px]" id="signature-filename-text">Firma cargada</span>
+                                        </div>
+                                        <button type="button" onclick="clearUploadedSignature(event)" class="text-red-500 hover:text-red-700 font-bold text-[9px] hover:underline">
+                                            Remover
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-navy-900 hover:bg-navy-800 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow transition-all flex items-center justify-center gap-1.5">
+                                <i data-lucide="check" class="w-4 h-4 text-greenLeaf"></i> Registrar Certificado
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+
+                <!-- Columna 2: Registros autorizados en formato tabla -->
+                <div class="lg:col-span-2 space-y-6 flex flex-col h-full">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+                        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div>
+                                <h3 class="font-bold text-navy-900 text-sm">Base de Diplomas Emitidos</h3>
+                                <p class="text-[11px] text-slate-400">Consulta los registros y obtén sus correspondientes códigos QR.</p>
+                            </div>
+                            <div class="relative w-full sm:w-56">
+                                <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400">
+                                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                                </span>
+                                <input type="text" id="record-search-box" oninput="renderCertificateDatabaseList(this.value)" placeholder="Buscar alumno, código o curso..." 
+                                    class="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:border-tealEcos">
+                            </div>
+                        </div>
+
+                        <!-- Tabla de Datos -->
+                        <div class="overflow-x-auto flex-grow max-h-[580px] no-scrollbar">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-150 text-slate-500 font-bold text-[9px] uppercase tracking-wider">
+                                        <th class="py-3 px-5">Código de Registro</th>
+                                        <th class="py-3 px-5">Egresado Titular</th>
+                                        <th class="py-3 px-5">Tema / Tipo</th>
+                                        <th class="py-3 px-5">Período Académico</th>
+                                        <th class="py-3 px-5">Firmante / Cargo</th>
+                                        <th class="py-3 px-5 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-records-body" class="divide-y divide-slate-100 text-xs text-slate-700">
+                                    <!-- Datos Dinámicos -->
+                                </tbody>
+                            </table>
+
+                            <!-- Sin datos -->
+                            <div id="table-empty-view" class="hidden py-16 text-center space-y-3">
+                                <div class="w-12 h-12 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto">
+                                    <i data-lucide="database-backup" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-xs">Sin registros de validación</p>
+                                    <p class="text-[10px] text-slate-400 max-w-xs mx-auto mt-0.5">Comienza a registrar alumnos para verlos listados en esta consola.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= VISTA IMPRIMIBLE DEL DIPLOMA COMPLETO ================= -->
+        <section id="view-certificate-full" class="hidden w-full space-y-6">
+            
+            <!-- Barra superior del generador -->
+            <div class="flex flex-wrap justify-between items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm print:hidden">
+                <button onclick="exitDiplomaView()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition-all flex items-center gap-2">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Cerrar Vista Completa
+                </button>
+                <button onclick="window.print()" class="px-5 py-2 bg-navy-900 hover:bg-navy-800 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-2 shadow-md">
+                    <i data-lucide="printer" class="w-4 h-4 text-greenLeaf"></i> Descargar PDF / Imprimir
+                </button>
+            </div>
+
+            <!-- CANVAS / DIPLOMA IMPRIMIBLE -->
+            <div id="diploma-canvas" class="bg-white max-w-4xl w-full mx-auto p-8 sm:p-14 rounded-sm shadow-2xl relative aspect-[1.414/1] flex flex-col justify-between overflow-hidden border-[16px] border-double border-tealEcos transition-all duration-300">
+                
+                <!-- Fondo sutil de filigrana con logo de Ecos Foundation -->
+                <div id="diploma-watermark" class="absolute inset-0 opacity-[0.015] pointer-events-none flex items-center justify-center">
+                    <svg class="w-[450px] h-[450px]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="45" stroke="#00A499" stroke-width="6" fill="none"/>
+                        <path d="M50 20 C40 35 40 65 50 70 C60 65 60 35 50 20 Z" fill="#00A499"/>
+                    </svg>
+                </div>
+
+                <!-- Cabecera del Diploma -->
+                <div id="diploma-header" class="flex justify-between items-start border-b border-slate-100 pb-5 z-10 relative">
+                    
+                    <!-- Ecos Foundation Vector en Diploma -->
+                    <div class="flex flex-col items-start gap-1">
+                        <svg class="h-9 sm:h-11 w-auto" viewBox="0 0 240 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g transform="translate(5, 5)">
+                                <circle cx="25" cy="25" r="23" stroke="#00A499" stroke-width="4" fill="none"/>
+                                <path d="M25 10 C21 17 21 32 25 35 C29 32 29 17 25 10 Z" fill="#00A499"/>
+                                <path d="M25 25 C15 25 11 31 15 36 C21 34 23 30 25 25 Z" fill="#00A499" opacity="0.85"/>
+                                <path d="M25 25 C35 25 39 31 35 36 C29 34 27 30 25 25 Z" fill="#00A499" opacity="0.85"/>
+                            </g>
+                            <text x="65" y="32" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="28" fill="#00A499" letter-spacing="-0.5">ecos</text>
+                            <text x="65" y="50" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="11" fill="#4B5563" letter-spacing="3.5">FOUNDATION</text>
+                        </svg>
+                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest pl-1">Organismo Regulador y Certificador</span>
+                    </div>
+
+                    <!-- Innova Labs Vector en Diploma -->
+                    <div class="flex flex-col items-end gap-1">
+                        <svg class="h-9 sm:h-11 w-auto" viewBox="0 0 240 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g transform="translate(5, 5)">
+                                <circle cx="25" cy="25" r="23" stroke="#091442" stroke-width="3" fill="none"/>
+                                <path d="M3 25 H47" stroke="#091442" stroke-width="1.5"/>
+                                <path d="M7 13 Q25 17 43 13" stroke="#091442" stroke-width="1" fill="none"/>
+                                <path d="M7 37 Q25 33 43 37" stroke="#091442" stroke-width="1" fill="none"/>
+                                <path d="M25 3 V47" stroke="#091442" stroke-width="1.5"/>
+                                <path d="M15 5 Q23 25 15 45" stroke="#091442" stroke-width="1" fill="none"/>
+                                <path d="M35 5 Q27 25 35 45" stroke="#091442" stroke-width="1" fill="none"/>
+                                <path d="M8 42 C16 40 40 34 43 12 C30 26 21 30 8 42 Z" fill="#00D182" stroke="#091442" stroke-width="1.2"/>
+                            </g>
+                            <text x="65" y="27" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="24" fill="#091442">Innova</text>
+                            <text x="65" y="49" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="24" fill="#091442">Labs</text>
+                        </svg>
+                        <span class="text-[8px] font-bold text-navy-900/60 uppercase tracking-widest pr-1">Plataforma Ejecutora Académica</span>
+                    </div>
+
+                </div>
+
+                <!-- Cuerpo Central de Texto de Diploma -->
+                <div class="text-center space-y-4 sm:space-y-6 my-auto py-6 z-10 relative">
+                    <div class="space-y-1">
+                        <h1 class="text-navy-900 font-extrabold tracking-widest uppercase text-lg sm:text-xl" id="diploma-type-header">CERTIFICADO DE APROBACIÓN</h1>
+                        <p class="text-slate-400 text-[9px] tracking-widest font-semibold">VALIDACIÓN Y AUDITORÍA EDUCATIVA PERMANENTE</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <p class="text-slate-500 font-medium italic text-[11px] sm:text-xs">Por haber cumplido exitosamente con todos los requisitos académicos y prácticos de:</p>
+                        <h2 id="diploma-course" class="text-navy-900 font-black text-base sm:text-xl leading-tight max-w-2xl mx-auto uppercase tracking-tight">
+                            TEMA SELECCIONADO PARA EMISIÓN
+                        </h2>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-slate-500 italic text-[11px] sm:text-xs">A favor de nuestro egresado titular:</p>
+                        <h3 id="diploma-student" class="text-tealEcos font-black text-xl sm:text-2xl tracking-wide uppercase">
+                            Nombre del Alumno Acreditado
+                        </h3>
+                        <p id="diploma-id" class="text-slate-400 font-mono text-[9px] sm:text-xs font-bold">Documento de Identificación Oficial: DNI 11.222.333</p>
+                    </div>
+
+                    <div class="text-slate-600 text-[10px] sm:text-xs max-w-xl mx-auto leading-relaxed">
+                        Programa llevado a cabo en el período del <strong id="diploma-start-date">--</strong> al <strong id="diploma-end-date">--</strong> con un total de <strong id="diploma-hours">00</strong> horas lectivas, registrado en las actas de <strong>Innova Labs</strong> y respaldado bajo el consejo directivo de <strong>Ecos Foundation</strong>.
+                    </div>
+                </div>
+
+                <!-- Firmas, Código Único y Código QR Real -->
+                <div class="grid grid-cols-3 items-end border-t border-slate-150 pt-5 z-10 relative">
+                    
+                    <!-- Firma Dinámica Dibujada o Subida -->
+                    <div id="diploma-signature-section" class="text-center flex flex-col items-center justify-center space-y-1">
+                        <div class="h-12 w-36 border-b border-slate-300 flex items-center justify-center overflow-hidden">
+                            <!-- Imagen de la firma subida -->
+                            <img id="diploma-signature-img" class="max-h-full max-w-full object-contain" src="" alt="Firma Autoridad">
+                        </div>
+                        <div class="space-y-0.5">
+                            <p id="diploma-signature-name" class="text-[9.5px] font-extrabold text-navy-900 leading-none">Nombre Autoridad</p>
+                            <p id="diploma-signature-role" class="text-[7.5px] text-slate-500 font-medium">Cargo Autoridad</p>
+                        </div>
+                    </div>
+
+                    <!-- Código de Registro y Fecha -->
+                    <div class="text-center space-y-3">
+                        <div class="space-y-0.5">
+                            <p class="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest">Código Oficial de Validación</p>
+                            <span id="diploma-code" class="inline-block px-3 py-1 bg-slate-100 text-navy-900 text-[9.5px] font-mono font-bold rounded border border-slate-200 tracking-widest uppercase">
+                                IL-CODE-000
+                            </span>
+                        </div>
+                        <div class="space-y-0.5">
+                            <p class="text-[8.5px] font-bold text-slate-600">Emitido el <span id="diploma-date">10 de Marzo de 2026</span></p>
+                            <p class="text-[7px] text-slate-400 italic">Vigencia con carácter público e internacional</p>
+                        </div>
+                    </div>
+
+                    <!-- Código QR e Instructivo de Lectura -->
+                    <div class="flex flex-col items-center justify-center gap-1">
+                        <div class="bg-white p-1 border border-slate-200 rounded shadow-sm flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20">
+                            <canvas id="diploma-qr-canvas" class="w-full h-full object-contain"></canvas>
+                        </div>
+                        <span class="text-[7px] font-extrabold text-slate-400 uppercase tracking-widest">Validar escaneando QR</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="bg-white border-t border-slate-200 py-6 print:hidden">
+        <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+            <p class="text-xs text-slate-400 font-semibold">
+                © 2026 Ecos Foundation & Innova Labs. Todos los derechos reservados.
+            </p>
+            <p class="text-[9.5px] text-slate-400 max-w-lg mx-auto leading-relaxed">
+                Este sistema utiliza algoritmos de encriptado de firmas locales. Cualquier alteración de certificados impresos puede ser verificada inmediatamente mediante nuestro validador público seguro.
+            </p>
+        </div>
+    </footer>
+
+    <!-- ESTILOS EXCLUSIVOS PARA IMPRESIÓN -->
+    <style media="print">
+        header, footer, main > section:not(#view-certificate-full), .bg-slate-50, .print\:hidden {
+            display: none !important;
+        }
+        
+        body, html {
+            background-color: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100% !important;
+        }
+
+        #view-certificate-full {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        #diploma-canvas {
+            box-shadow: none !important;
+            width: 100% !important;
+            height: auto !important;
+            padding: 30px !important;
+            margin: 0 auto !important;
+            page-break-inside: avoid !important;
+        }
+    </style>
+
+    <!-- ARCHIVO LÓGICO DE CONTROL (JAVASCRIPT) -->
+    <script>
+        // --- 1. DATOS INICIALES ACADÉMICOS DE PRUEBA ---
+        // Firmas predeterminadas Base64 para demostración inicial
+        const DEFAULT_SIG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='50' viewBox='0 0 150 50'><path d='M10,25 Q30,5 60,35 T110,15 T140,30' fill='none' stroke='%2300A499' stroke-width='2.5'/></svg>";
+        const DEFAULT_SIG_B = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='50' viewBox='0 0 150 50'><path d='M15,35 C35,10 50,45 80,15 C100,5 120,40 140,20' fill='none' stroke='%23091442' stroke-width='2'/></svg>";
+
+        const DEMO_CERTIFICATES = [
+            {
+                code: "IL-2026-X8Y9Z",
+                studentName: "María Alejandra Benítez Torres",
+                studentId: "10.456.789",
+                certType: "Diplomado",
+                courseName: "Tecnologías Verdes y Energías Renovables",
+                hours: 120,
+                startDate: "2026-01-10",
+                endDate: "2026-03-05",
+                issueDate: "2026-03-10",
+                signatoryName: "Dr. Alejandro Montenegro",
+                signatoryRole: "Presidente General de Ecos Foundation",
+                signatureImage: DEFAULT_SIG
+            },
+            {
+                code: "IL-2026-A1B2C",
+                studentName: "Carlos Eduardo Mendoza Rincón",
+                studentId: "15.890.123",
+                certType: "Curso",
+                courseName: "Economía Circular y Huella de Carbono",
+                hours: 40,
+                startDate: "2026-03-01",
+                endDate: "2026-04-15",
+                issueDate: "2026-04-22",
+                signatoryName: "Dra. Beatriz Cárdenas",
+                signatoryRole: "Directora Académica de Innova Labs",
+                signatureImage: DEFAULT_SIG_B
+            },
+            {
+                code: "ECOS-2026-991A",
+                studentName: "Lucía Fernanda Montenegro Solís",
+                studentId: "20.112.334",
+                certType: "Especialización",
+                courseName: "Gestión y Conservación de Ecosistemas Continentales",
+                hours: 80,
+                startDate: "2026-02-15",
+                endDate: "2026-05-10",
+                issueDate: "2026-05-15",
+                signatoryName: "Dr. Alejandro Montenegro",
+                signatoryRole: "Presidente General de Ecos Foundation",
+                signatureImage: DEFAULT_SIG
+            }
+        ];
+
+        let database = [];
+        let systemConfig = {
+            prefix: "IL-",
+            adminPin: "admin123"
+        };
+
+        // Estado temporal de la firma cargada
+        let uploadedSignatureBase64 = "";
+
+        // --- 2. CONFIGURACIÓN E INICIALIZACIÓN ---
+        function initApp() {
+            // Inicializar base de datos local
+            if (!localStorage.getItem("innovalabs_certificates")) {
+                localStorage.setItem("innovalabs_certificates", JSON.stringify(DEMO_CERTIFICATES));
+            }
+            if (!localStorage.getItem("innovalabs_config")) {
+                localStorage.setItem("innovalabs_config", JSON.stringify(systemConfig));
+            }
+
+            database = JSON.parse(localStorage.getItem("innovalabs_certificates"));
+            systemConfig = JSON.parse(localStorage.getItem("innovalabs_config"));
+
+            // Poblar valores de configuración iniciales en los inputs de admin
+            document.getElementById("cfg-prefix-input").value = systemConfig.prefix;
+
+            // Cargar datos de firmante guardado si existe (incluye firma guardada)
+            loadSavedSignatory();
+
+            // Renderizar la tabla de registros para administración
+            renderCertificateDatabaseList();
+
+            // VERIFICACIÓN AUTOMÁTICA DE PARÁMETRO EN LA URL
+            const urlQuery = new URLSearchParams(window.location.search);
+            const directId = urlQuery.get('id');
+            if (directId) {
+                document.getElementById("search-code-input").value = directId.toUpperCase();
+                switchView('verify');
+                processVerificationFlow(directId);
+            }
+        }
+
+        // --- 3. CAMBIO DE VISTAS CON NAVEGACIÓN DE ESTADO ---
+        function switchView(viewName) {
+            shutdownCameraScanner();
+
+            document.getElementById("view-verify").classList.add("hidden");
+            document.getElementById("view-admin-login").classList.add("hidden");
+            document.getElementById("view-admin-dashboard").classList.add("hidden");
+            document.getElementById("view-certificate-full").classList.add("hidden");
+
+            document.getElementById("nav-verify").className = "px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 flex items-center gap-2 text-slate-600 hover:text-navy-900";
+            document.getElementById("nav-admin").className = "px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 flex items-center gap-2 text-slate-600 hover:text-navy-900";
+
+            if (viewName === 'verify') {
+                document.getElementById("view-verify").classList.remove("hidden");
+                document.getElementById("nav-verify").className = "px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 flex items-center gap-2 bg-white text-navy-900 shadow-sm";
+            } else if (viewName === 'admin-login') {
+                if (sessionStorage.getItem("innova_auth_active") === "true") {
+                    switchView('admin-dashboard');
+                    return;
+                }
+                document.getElementById("view-admin-login").classList.remove("hidden");
+                document.getElementById("nav-admin").className = "px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 flex items-center gap-2 bg-white text-navy-900 shadow-sm";
+                document.getElementById("pwd-input").focus();
+            } else if (viewName === 'admin-dashboard') {
+                if (sessionStorage.getItem("innova_auth_active") !== "true") {
+                    switchView('admin-login');
+                    return;
+                }
+                document.getElementById("view-admin-dashboard").classList.remove("hidden");
+                document.getElementById("nav-admin").className = "px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all duration-200 flex items-center gap-2 bg-white text-navy-900 shadow-sm";
+                renderCertificateDatabaseList();
+            } else if (viewName === 'certificate') {
+                document.getElementById("view-certificate-full").classList.remove("hidden");
+            }
+
+            lucide.createIcons();
+        }
+
+        // --- 4. CONTROL DE PESTAÑAS (CÓDIGO VS QR) ---
+        function toggleVerifyTab(tabType) {
+            shutdownCameraScanner();
+            const tabCode = document.getElementById("tab-code");
+            const tabQr = document.getElementById("tab-qr");
+            const panelCode = document.getElementById("panel-code");
+            const panelQr = document.getElementById("panel-qr");
+
+            if (tabType === 'code') {
+                tabCode.className = "flex-1 py-4 text-center font-bold text-xs sm:text-sm border-b-2 border-tealEcos text-tealEcos flex items-center justify-center gap-2";
+                tabQr.className = "flex-1 py-4 text-center font-bold text-xs sm:text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2";
+                panelCode.classList.remove("hidden");
+                panelQr.classList.add("hidden");
+            } else {
+                tabCode.className = "flex-1 py-4 text-center font-bold text-xs sm:text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2";
+                tabQr.className = "flex-1 py-4 text-center font-bold text-xs sm:text-sm border-b-2 border-tealEcos text-tealEcos flex items-center justify-center gap-2";
+                panelCode.classList.add("hidden");
+                panelQr.classList.remove("hidden");
+            }
+        }
+
+        // --- 5. NOTIFICACIONES FLOTANTES (TOASTS) ---
+        let toastTimeout = null;
+        function triggerToast(title, message, isError = false) {
+            const toastEl = document.getElementById("toast");
+            const toastTitle = document.getElementById("toast-title");
+            const toastMsg = document.getElementById("toast-message");
+            const iconBox = document.getElementById("toast-icon-box");
+
+            toastTitle.innerText = title;
+            toastMsg.innerText = message;
+
+            if (isError) {
+                toastEl.classList.replace("border-tealEcos", "border-red-500");
+                iconBox.className = "p-1 rounded-lg bg-red-100 text-red-600";
+                iconBox.innerHTML = `<i data-lucide="alert-circle" class="w-5 h-5"></i>`;
+            } else {
+                toastEl.classList.replace("border-red-500", "border-tealEcos");
+                iconBox.className = "p-1 rounded-lg bg-tealEcos-light text-tealEcos";
+                iconBox.innerHTML = `<i data-lucide="badge-check" class="w-5 h-5"></i>`;
+            }
+
+            lucide.createIcons();
+            toastEl.classList.remove("translate-y-24", "opacity-0");
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastEl.classList.add("translate-y-24", "opacity-0");
+            }, 4500);
+        }
+
+        // --- 6. GESTIÓN DE CÁMARA Y ESCANEO QR REAL / SIMULACIÓN ---
+        let cameraEngine = null;
+
+        function startCameraScanner() {
+            document.getElementById("camera-idle-view").classList.add("hidden");
+            document.getElementById("camera-scanning-view").classList.remove("hidden");
+
+            cameraEngine = new Html5Qrcode("reader-camera");
+            const configObj = { fps: 12, qrbox: { width: 220, height: 220 } };
+
+            cameraEngine.start(
+                { facingMode: "environment" },
+                configObj,
+                (textResult) => {
+                    shutdownCameraScanner();
+                    triggerToast("Código QR Escaneado", "Decodificación completada exitosamente.");
+                    handleDecodedString(textResult);
+                },
+                () => {
+                    // Buscando...
+                }
+            ).catch(() => {
+                triggerToast("Permiso de Cámara Denegado", "No se pudo acceder a la cámara. Introduce tu código manualmente.", true);
+                shutdownCameraScanner();
+            });
+        }
+
+        function shutdownCameraScanner() {
+            document.getElementById("camera-idle-view").classList.remove("hidden");
+            document.getElementById("camera-scanning-view").classList.add("hidden");
+
+            if (cameraEngine) {
+                cameraEngine.stop().then(() => {
+                    cameraEngine = null;
+                }).catch(err => console.warn(err));
+            }
+        }
+
+        function triggerDemoScannerSim() {
+            if (database.length === 0) {
+                triggerToast("Base vacía", "No existen registros en el sistema para realizar la simulación.", true);
+                return;
+            }
+            const index = Math.floor(Math.random() * database.length);
+            const selected = database[index];
+
+            triggerToast("Simulación QR", "Decodificando QR del diploma.");
+            handleDecodedString(`${getVerificationBaseUrl()}?id=${selected.code}`);
+        }
+
+        function handleDecodedString(decodedText) {
+            let processedCode = decodedText;
+            try {
+                const parsedURL = new URL(decodedText);
+                const queryId = parsedURL.searchParams.get("id");
+                if (queryId) {
+                    processedCode = queryId;
+                }
+            } catch (err) {
+                // No es una URL válida
+            }
+
+            document.getElementById("search-code-input").value = processedCode.toUpperCase();
+            toggleVerifyTab('code');
+
+            // Dar efecto visual de autocompletado antes de verificar
+            const inputField = document.getElementById("search-code-input");
+            inputField.classList.add("ring-4", "ring-tealEcos/30", "bg-tealEcos-light/20");
+            setTimeout(() => {
+                inputField.classList.remove("ring-4", "ring-tealEcos/30", "bg-tealEcos-light/20");
+            }, 1000);
+
+            processVerificationFlow(processedCode);
+        }
+
+        // --- Helper para obtener la URL base de validación pública autodetectada ---
+        function getVerificationBaseUrl() {
+            return `${window.location.origin}${window.location.pathname}`;
+        }
+
+        // --- 7. FLUJO DE VERIFICACIÓN Y VALIDACIÓN TOTALMENTE PÚBLICO ---
+        let verifiedMatch = null;
+
+        function handleCodeVerification() {
+            const entered = document.getElementById("search-code-input").value.trim();
+            if (!entered) {
+                triggerToast("Faltan Datos", "Ingresa un código de certificado antes de iniciar.", true);
+                return;
+            }
+            processVerificationFlow(entered);
+        }
+
+        function processVerificationFlow(targetCode) {
+            const queryNorm = targetCode.trim().toUpperCase();
+            const found = database.find(item => item.code.toUpperCase() === queryNorm);
+
+            const resultArea = document.getElementById("search-result-area");
+            const detailsCard = document.getElementById("certificate-details-box");
+            const notFoundCard = document.getElementById("certificate-not-found-box");
+
+            resultArea.classList.remove("hidden");
+            detailsCard.classList.add("hidden");
+            notFoundCard.classList.add("hidden");
+
+            if (!found) {
+                notFoundCard.classList.remove("hidden");
+                triggerToast("No Encontrado", "El código ingresado no existe en nuestros servidores de Innova Labs.", true);
+                return;
+            }
+
+            verifiedMatch = found;
+            displayCertificateData(found);
+            
+            // Hacer scroll suave hacia los resultados
+            setTimeout(() => {
+                resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 200);
+        }
+
+        function displayCertificateData(cert) {
+            const detailsCard = document.getElementById("certificate-details-box");
+            detailsCard.classList.remove("hidden");
+
+            // Rellenar información visual de consulta de texto
+            document.getElementById("detail-student-name").innerText = cert.studentName;
+            document.getElementById("detail-student-id").innerText = `IDENTIFICACIÓN OFICIAL: ${cert.studentId}`;
+            document.getElementById("detail-certificate-code").innerText = cert.code;
+            
+            const tipoCertText = cert.certType ? cert.certType : "Programa";
+            document.getElementById("detail-cert-type-label").innerText = `Acreditación de ${tipoCertText}`;
+            document.getElementById("detail-course-name").innerText = cert.courseName;
+            
+            const fechaInicioStr = cert.startDate ? formatDateToSpanish(cert.startDate) : "--";
+            const fechaFinStr = cert.endDate ? formatDateToSpanish(cert.endDate) : "--";
+            document.getElementById("detail-issue-period").innerText = `${fechaInicioStr} al ${fechaFinStr}`;
+            
+            document.getElementById("detail-course-hours").innerText = `${cert.hours} Horas Lectivas`;
+            document.getElementById("detail-issue-date").innerText = formatDateToSpanish(cert.issueDate);
+        }
+
+        function clearSearchState() {
+            document.getElementById("search-result-area").classList.add("hidden");
+            document.getElementById("search-code-input").value = "";
+            document.getElementById("search-code-input").focus();
+            verifiedMatch = null;
+        }
+
+        // --- 8. VISTA DE DIPLOMA FÍSICO IMPRIMIBLE ---
+        function renderFullDiplomaView() {
+            if (!verifiedMatch) return;
+
+            switchView('certificate');
+
+            // Renderizado de datos del alumno y curso en el diploma
+            const tipoCert = verifiedMatch.certType ? verifiedMatch.certType.toUpperCase() : "APROBACIÓN";
+            document.getElementById("diploma-type-header").innerText = `CERTIFICADO DE ${tipoCert}`;
+            document.getElementById("diploma-course").innerText = verifiedMatch.courseName.toUpperCase();
+            document.getElementById("diploma-student").innerText = verifiedMatch.studentName;
+            document.getElementById("diploma-id").innerText = `Documento de Identificación Oficial: ${verifiedMatch.studentId}`;
+            document.getElementById("diploma-hours").innerText = verifiedMatch.hours;
+            document.getElementById("diploma-code").innerText = verifiedMatch.code;
+            document.getElementById("diploma-date").innerText = formatDateToSpanish(verifiedMatch.issueDate);
+
+            // Fechas académicas
+            document.getElementById("diploma-start-date").innerText = formatDateToSpanish(verifiedMatch.startDate);
+            document.getElementById("diploma-end-date").innerText = formatDateToSpanish(verifiedMatch.endDate);
+
+            // Renderizado de FIRMANTE, CARGO y FIRMA SUBIDA
+            document.getElementById("diploma-signature-name").innerText = verifiedMatch.signatoryName || "Dr. Alejandro Montenegro";
+            document.getElementById("diploma-signature-role").innerText = verifiedMatch.signatoryRole || "Presidente General de Ecos Foundation";
+
+            const sigImg = document.getElementById("diploma-signature-img");
+            if (verifiedMatch.signatureImage) {
+                sigImg.src = verifiedMatch.signatureImage;
+                sigImg.style.display = "block";
+            } else {
+                sigImg.src = "";
+                sigImg.style.display = "none";
+            }
+
+            // Generar Código QR Real Local en un elemento Canvas de forma offline
+            const qrCanvas = document.getElementById("diploma-qr-canvas");
+            const validationURL = `${getVerificationBaseUrl()}?id=${encodeURIComponent(verifiedMatch.code)}`;
+            
+            new QRious({
+                element: qrCanvas,
+                value: validationURL,
+                size: 200,
+                foreground: '#091442',
+                background: '#ffffff',
+                level: 'H'
+            });
+        }
+
+        function exitDiplomaView() {
+            switchView('verify');
+            if (verifiedMatch) {
+                document.getElementById("search-result-area").classList.remove("hidden");
+                displayCertificateData(verifiedMatch);
+            }
+        }
+
+        // --- 9. SISTEMA ADMINISTRATIVO (LOGIN, LOGOUT, CONFIG) ---
+        function processLogin() {
+            const enteredPw = document.getElementById("pwd-input").value;
+            if (enteredPw === systemConfig.adminPin) {
+                sessionStorage.setItem("innova_auth_active", "true");
+                document.getElementById("pwd-input").value = "";
+                triggerToast("Acceso Concedido", "Panel administrativo desbloqueado.");
+                switchView('admin-dashboard');
+            } else {
+                triggerToast("Fallo de Autenticación", "La contraseña es incorrecta.", true);
+            }
+        }
+
+        function processLogout() {
+            sessionStorage.removeItem("innova_auth_active");
+            triggerToast("Sesión Cerrada", "Has salido de la administración.");
+            switchView('verify');
+        }
+
+        function saveConfigSettings() {
+            const inputPrefix = document.getElementById("cfg-prefix-input").value.trim().toUpperCase();
+            systemConfig.prefix = inputPrefix || "IL-";
+            localStorage.setItem("innovalabs_config", JSON.stringify(systemConfig));
+        }
+
+        // --- 10. GESTIÓN DE SUBIDA Y CARGA DE FIRMA (NUEVO) ---
+        function handleSignatureFileUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedSignatureBase64 = e.target.result;
+                    document.getElementById("signature-filename-text").innerText = file.name;
+                    document.getElementById("signature-preview-box").classList.remove("hidden");
+                    triggerToast("Firma Cargada", "La firma digital se ha subido correctamente.");
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function clearUploadedSignature(event) {
+            if (event) event.stopPropagation();
+            uploadedSignatureBase64 = "";
+            document.getElementById("signature-file-input").value = "";
+            document.getElementById("signature-preview-box").classList.add("hidden");
+            triggerToast("Firma Removida", "Se ha removido el archivo de la firma.", true);
+        }
+
+        // --- 11. EMISIÓN DE CERTIFICADOS ---
+        function emitNewCertificate() {
+            const name = document.getElementById("student-name-field").value.trim();
+            const personalId = document.getElementById("student-id-field").value.trim();
+            const certType = document.getElementById("cert-type-field").value;
+            const courseName = document.getElementById("course-name-field").value.trim();
+            const hoursValue = parseInt(document.getElementById("course-hours-field").value);
+            const issueDate = document.getElementById("issue-date-field").value;
+            
+            const startDate = document.getElementById("start-date-field").value;
+            const endDate = document.getElementById("end-date-field").value;
+
+            const sigName = document.getElementById("signatory-name-field").value.trim();
+            const sigRole = document.getElementById("signatory-role-field").value.trim();
+
+            // Usar la firma cargada o un trazo de demostración por defecto
+            const signatureImgData = uploadedSignatureBase64 || DEFAULT_SIG;
+
+            // Generar código único incremental con el prefijo activo
+            const randomCodeNum = Math.floor(10000 + Math.random() * 90000);
+            const generatedCode = `${systemConfig.prefix}${randomCodeNum}`;
+
+            const objectCertificate = {
+                code: generatedCode,
+                studentName: name,
+                studentId: personalId,
+                certType: certType,
+                courseName: courseName,
+                hours: hoursValue,
+                startDate: startDate,
+                endDate: endDate,
+                issueDate: issueDate,
+                signatoryName: sigName,
+                signatoryRole: sigRole,
+                signatureImage: signatureImgData
+            };
+
+            database.unshift(objectCertificate);
+            localStorage.setItem("innovalabs_certificates", JSON.stringify(database));
+
+            // Guardar datos de firmante y firma de manera permanente si se marca el checkbox
+            if (document.getElementById("save-signatory-pref").checked) {
+                localStorage.setItem("innovalabs_saved_signatory_name", sigName);
+                localStorage.setItem("innovalabs_saved_signatory_role", sigRole);
+                localStorage.setItem("innovalabs_saved_signature_image", signatureImgData);
+                localStorage.setItem("innovalabs_saved_signatory_pref_check", "true");
+            } else {
+                localStorage.removeItem("innovalabs_saved_signatory_name");
+                localStorage.removeItem("innovalabs_saved_signatory_role");
+                localStorage.removeItem("innovalabs_saved_signature_image");
+                localStorage.removeItem("innovalabs_saved_signatory_pref_check");
+            }
+
+            // Resetear el formulario de creación
+            document.getElementById("form-registration").reset();
+            clearUploadedSignature(); // Limpiar firma actual del formulario
+            loadSavedSignatory(); // Recargar firmante guardado si aplica
+
+            triggerToast("Certificado Emitido", `Registrado bajo el código único: ${generatedCode}`);
+            renderCertificateDatabaseList();
+        }
+
+        // Cargar datos guardados del firmante
+        function loadSavedSignatory() {
+            const savedName = localStorage.getItem("innovalabs_saved_signatory_name");
+            const savedRole = localStorage.getItem("innovalabs_saved_signatory_role");
+            const savedSig = localStorage.getItem("innovalabs_saved_signature_image");
+            const savedPref = localStorage.getItem("innovalabs_saved_signatory_pref_check");
+
+            if (savedPref === "true" && savedName && savedRole) {
+                document.getElementById("signatory-name-field").value = savedName;
+                document.getElementById("signatory-role-field").value = savedRole;
+                document.getElementById("save-signatory-pref").checked = true;
+                
+                if (savedSig) {
+                    uploadedSignatureBase64 = savedSig;
+                    document.getElementById("signature-filename-text").innerText = "Firma del firmante predeterminado";
+                    document.getElementById("signature-preview-box").classList.remove("hidden");
+                }
+            }
+        }
+
+        // --- 12. MODAL DE CÓDIGO QR ---
+        let currentModalQrUrl = "";
+        let currentModalCode = "";
+
+        function openQrModal(code, studentName) {
+            currentModalCode = code;
+            const validationURL = `${getVerificationBaseUrl()}?id=${encodeURIComponent(code)}`;
+            currentModalQrUrl = validationURL;
+
+            document.getElementById("modal-qr-student").innerText = studentName;
+            document.getElementById("modal-qr-code").innerText = code;
+
+            const qrCanvas = document.getElementById("modal-qr-canvas");
+            
+            new QRious({
+                element: qrCanvas,
+                value: validationURL,
+                size: 250,
+                foreground: '#091442',
+                background: '#ffffff',
+                level: 'H'
+            });
+
+            const modal = document.getElementById("qr-modal");
+            modal.classList.remove("hidden");
+            setTimeout(() => {
+                modal.firstElementChild.classList.remove("scale-95");
+            }, 10);
+        }
+
+        function closeQrModal() {
+            const modal = document.getElementById("qr-modal");
+            modal.firstElementChild.classList.add("scale-95");
+            setTimeout(() => {
+                modal.classList.add("hidden");
+            }, 200);
+        }
+
+        function copyValidationLink() {
+            if (!currentModalQrUrl) return;
+            const el = document.createElement('textarea');
+            el.value = currentModalQrUrl;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            triggerToast("Enlace Copiado", "El enlace directo de validación se ha copiado al portapapeles.");
+        }
+
+        function printQrDirectly() {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Imprimir Código QR - ${currentModalCode}</title>
+                    <style>
+                        body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; margin: 0; }
+                        canvas { width: 300px; height: 300px; margin-bottom: 20px; }
+                        h2 { color: #091442; margin: 0; }
+                        p { color: #555; margin: 5px 0 0; font-family: monospace; font-size: 18px; font-weight: bold; }
+                    </style>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"><\/script>
+                </head>
+                <body>
+                    <canvas id="qr"></canvas>
+                    <h2>Innova Labs - Validación Oficial</h2>
+                    <p>CÓDIGO: ${currentModalCode}</p>
+                    <script>
+                        new QRious({
+                            element: document.getElementById('qr'),
+                            value: '${currentModalQrUrl}',
+                            size: 350,
+                            foreground: '#091442',
+                            background: '#ffffff',
+                            level: 'H'
+                        });
+                        setTimeout(function() {
+                            window.print();
+                            window.close();
+                        }, 350);
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        // Gestión del Modal de confirmación de borrado
+        let pendingDeleteCode = null;
+
+        function openConfirmDeleteModal(code) {
+            pendingDeleteCode = code;
+            const modal = document.getElementById("confirm-modal");
+            modal.classList.remove("hidden");
+            setTimeout(() => {
+                modal.firstElementChild.classList.remove("scale-95");
+            }, 10);
+        }
+
+        function closeConfirmDeleteModal() {
+            const modal = document.getElementById("confirm-modal");
+            modal.firstElementChild.classList.add("scale-95");
+            setTimeout(() => {
+                modal.classList.add("hidden");
+                pendingDeleteCode = null;
+            }, 200);
+        }
+
+        document.getElementById("btn-cancel-confirm").addEventListener("click", closeConfirmDeleteModal);
+        document.getElementById("btn-action-confirm").addEventListener("click", () => {
+            if (pendingDeleteCode) {
+                database = database.filter(item => item.code !== pendingDeleteCode);
+                localStorage.setItem("innovalabs_certificates", JSON.stringify(database));
+                triggerToast("Acreditación Eliminada", `El registro ${pendingDeleteCode} se ha borrado.`, true);
+                closeConfirmDeleteModal();
+                renderCertificateDatabaseList();
+            }
+        });
+
+        // --- 13. RENDERIZACIÓN DE LA TABLA DE REGISTROS ---
+        function renderCertificateDatabaseList(searchQuery = "") {
+            const tBody = document.getElementById("table-records-body");
+            const emptyView = document.getElementById("table-empty-view");
+            tBody.innerHTML = "";
+
+            const normalizedQuery = searchQuery.toLowerCase().trim();
+
+            const filteredData = database.filter(item => {
+                return item.code.toLowerCase().includes(normalizedQuery) ||
+                       item.studentName.toLowerCase().includes(normalizedQuery) ||
+                       item.studentId.includes(normalizedQuery) ||
+                       item.courseName.toLowerCase().includes(normalizedQuery);
+            });
+
+            if (filteredData.length === 0) {
+                emptyView.classList.remove("hidden");
+                return;
+            } else {
+                emptyView.classList.add("hidden");
+            }
+
+            filteredData.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 border-b border-slate-100 transition-colors";
+                
+                const fInicio = item.startDate ? formatDateToSpanish(item.startDate) : "--";
+                const fFin = item.endDate ? formatDateToSpanish(item.endDate) : "--";
+                const tipoText = item.certType ? item.certType : "Programa";
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-5 font-mono font-bold text-navy-900">${item.code}</td>
+                    <td class="py-3.5 px-5">
+                        <div class="font-bold text-slate-900 text-xs">${item.studentName}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">DNI: ${item.studentId}</div>
+                    </td>
+                    <td class="py-3.5 px-5">
+                        <div class="text-slate-700 font-bold max-w-xs truncate" title="${item.courseName}">${item.courseName}</div>
+                        <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 font-bold rounded text-[8.5px] mt-0.5">${tipoText}</span>
+                    </td>
+                    <td class="py-3.5 px-5">
+                        <div class="text-slate-600 font-medium text-[10px] leading-tight">Del: ${fInicio}</div>
+                        <div class="text-slate-600 font-medium text-[10px] leading-tight">Al: ${fFin}</div>
+                        <div class="text-[9px] text-slate-400 font-semibold mt-1">Horas: ${item.hours}h</div>
+                    </td>
+                    <td class="py-3.5 px-5">
+                        <div class="font-bold text-slate-900 text-[11px]">${item.signatoryName || "Sin registrar"}</div>
+                        <div class="text-[9px] text-tealEcos font-semibold">${item.signatoryRole || ""}</div>
+                    </td>
+                    <td class="py-3.5 px-5">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="openQrModal('${item.code}', '${item.studentName}')" class="p-1.5 bg-greenLeaf-light hover:bg-greenLeaf text-greenLeaf-dark hover:text-white rounded-lg transition-all" title="Ver QR de Validación">
+                                <i data-lucide="qr-code" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="previewCertificateFromAdmin('${item.code}')" class="p-1.5 bg-slate-100 hover:bg-tealEcos-light text-tealEcos rounded-lg transition-all" title="Visualizar Diploma Completo">
+                                <i data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="openConfirmDeleteModal('${item.code}')" class="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-all" title="Invalidar Diploma">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tBody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        function previewCertificateFromAdmin(code) {
+            const found = database.find(item => item.code === code);
+            if (found) {
+                verifiedMatch = found;
+                renderFullDiplomaView();
+            }
+        }
+
+        // --- AUXILIARES ---
+        function formatDateToSpanish(rawDateString) {
+            if (!rawDateString) return "N/A";
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const instance = new Date(rawDateString + 'T00:00:00');
+            return instance.toLocaleDateString('es-ES', options);
+        }
+
+        // --- INICIALIZADOR GLOBAL ---
+        window.onload = function() {
+            initApp();
+        };
+    </script>
+</body>
+</html>
